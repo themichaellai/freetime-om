@@ -1,6 +1,7 @@
 (ns freetime-om.core
   (:use
     [clojure.string :only [split]]
+    [freetime-om.goog-calendar :only [calendar-list]]
     [freetime-om.oauth :only [validate-token build-oauth-url]])
   (:require
     [cljs.core.async :as async :refer [chan close! <!]]
@@ -31,7 +32,10 @@
     (let [access-token (get-access-token (subs location.hash 1))
           token-is-validated (<! (validate-token access-token))]
       (if token-is-validated
-        (swap! app-state (fn [s] (assoc s :access-token access-token)))
+        (let [swapees {:access-token access-token
+                       :calendars (<! (calendar-list access-token))}]
+          (doseq [kv swapees]
+            (swap! app-state (fn [s] (assoc s (key kv) (val kv))))))
         (js/console.log "not validated"))))
   nil)
 
